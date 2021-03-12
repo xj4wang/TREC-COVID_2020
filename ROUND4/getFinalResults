@@ -1,0 +1,147 @@
+#!/bin/bash
+
+############################################
+## EXPECTS THAT JUDGEMENTS HAVE BEEN MADE ##
+############################################
+# where # is the topic number
+
+echo "Getting Final Results START!"
+
+topic=$1
+working_files="WORKINGFILES"
+directory="metadata_files"
+valid_docids="docids-rnd4.txt"
+
+train_file="${working_files}/train_file_${topic}"
+test_file="${working_files}/test_file_${topic}"
+test_file_ids="${working_files}/test_file_ids_${topic}"
+model="${working_files}/model_${topic}"
+results="${working_files}/results_file_${topic}" # this doesn't really matter, is never used
+
+jj_file="${working_files}/jj_topic_${topic}"
+qrel_file="qrels-covid_d3_j2.5-3.txt"
+
+###################################
+## SofiaML hyperparameters START ##
+###################################
+# hyperparameters by https://dl.acm.org/doi/10.1145/2600428.2609601
+iterations=2000000
+dimensionality=1100000
+learner_type="logreg-pegasos" #paper only says Pegasos, log-pegasos is chosen from Gordon's class
+# hyperparameters by Gordon's class
+loop_type="roc" #he didn't specify, we went with the one that's binary labeling
+lambda=0.00001
+#################################
+## SofiaML hyperparameters END ##
+#################################
+
+## USE JJ FILES TO TRAIN THE FINAL MODELS ##
+# filter out the ones that have been judged (using jj_topic_#) and label accordingly
+# and store results to train_file, the rest are stored to test_file wtih rel 0
+python label_rel.py $topic $train_file $test_file $test_file_ids $working_files $jj_file
+# feed training_file_# to sofiaML to and obtain the model
+~/sofia-ml-read-only/sofia-ml --learner_type $learner_type --loop_type $loop_type --lambda $lambda --iterations $iterations --dimensionality $dimensionality --training_file $train_file --model_out $model
+
+
+## RUNs SET UP FILES ##
+U="U_file"
+sort $valid_docids | uniq > $U # UNIQ NEEDS SORT FIRST!!
+## REMOVE ALL QREL FILES (from previous rounds) FROM U
+grep "^${topic} " $qrel_file | cut -d ' ' -f 4 | sort | uniq > temp # UNIQ NEEDS SORT FIRST!!
+# find lines only in file1 (and not in file2); only in U and not in qrel=temp
+comm -23 $U temp > temp2
+mv temp2 $U # U no longer contains any qrel files from previous rounds
+
+
+## RUN 2 ##
+run2_results="run2_results_${topic}"
+
+python create_test_file.py $test_file $U
+# feed model and testing_file_# to sofiaML to get rel judgements
+~/sofia-ml-read-only/sofia-ml --model_in $model --test_file $test_file --results_file $results
+cut -f 1 $results > t
+paste -d ' ' t $U > t2
+sort -rg t2 | cut -d ' ' -f 2 | head -n 1000 > $run2_results
+
+
+## CREATE FILES WITH LABELS OF 2 ##
+twos_file="twos_file"
+grep "2$" $jj_file | cut -d ',' -f 1 | sort | uniq > $twos_file
+# find lines common to both files; files that are both valid in U and have judgement of 2
+comm -12 $U $twos_file > temp
+mv temp $twos_file
+# find lines only in file1 (and not in file2); only in U and not in twos_file
+comm -23 $U $twos_file > temp2
+mv temp2 $U # U no longer contains any files from twos_file
+
+## CREATE FILES WITH LABELS OF 1 ##
+ones_file="ones_file"
+grep "1$" $jj_file | cut -d ',' -f 1 | sort | uniq > $ones_file
+# find lines common to both files; files that are both valid in U and have judgement of 1
+comm -12 $U $ones_file > temp
+mv temp $ones_file
+# find lines only in file1 (and not in file2); only in U and not in ones_file
+comm -23 $U $ones_file > temp2
+mv temp2 $U # U no longer contains any files from twos_file nor ones_file
+
+## CREATE FILES WITH LABELS OF 0 ##
+zeros_file="zeros_file"
+grep "0$" $jj_file | cut -d ',' -f 1 | sort | uniq > $zeros_file
+# find lines common to both files; files that are both valid in U and have judgement of 0
+comm -12 $U $zeros_file > temp
+mv temp $zeros_file
+# find lines only in file1 (and not in file2); only in U and not in zeros_file
+comm -23 $U $zeros_file > temp2
+mv temp2 $U # U no longer contains any files from twos_file nor ones_file nor zeros_file
+
+## CREATE FILE WITHOUT LABELS ##
+seen_file="seen_file"
+unseen_file="unseen_file"
+cat $twos_file $ones_file $zeros_file | sort | uniq > $seen_file
+# find lines only in file1 (and not in file2); only in U and not in 2s, 1s, nor 0s
+comm -23 $U $seen_file > $unseen_file
+
+## DO RUNS ##
+## RUN 1 and 3 ##
+run1_results="run1_results_${topic}"
+run3_results="run3_results_${topic}"
+
+python create_test_file.py $test_file $twos_file
+# feed model and testing_file_# to sofiaML to get rel judgements
+~/sofia-ml-read-only/sofia-ml --model_in $model --test_file $test_file --results_file $results
+# paste together file ids and their results before sorting
+cut -f 1 $results > t
+paste -d ' ' t $twos_file > t2
+sort -rg t2 | cut -d ' ' -f 2 > temp2
+
+python create_test_file.py $test_file $ones_file
+# feed model and testing_file_# to sofiaML to get rel judgements
+~/sofia-ml-read-only/sofia-ml --model_in $model --test_file $test_file --results_file $results
+# paste together file ids and their results before sorting
+cut -f 1 $results > t
+paste -d ' ' t $ones_file > t2
+sort -rg t2 | cut -d ' ' -f 2 > temp1
+
+python create_test_file.py $test_file $zeros_file
+# feed model and testing_file_# to sofiaML to get rel judgements
+~/sofia-ml-read-only/sofia-ml --model_in $model --test_file $test_file --results_file $results
+cut -f 1 $results > t
+paste -d ' ' t $zeros_file > t2
+sort -rg t2 | cut -d ' ' -f 2 > temp0
+
+python create_test_file.py $test_file $unseen_file
+# feed model and testing_file_# to sofiaML to get rel judgements
+~/sofia-ml-read-only/sofia-ml --model_in $model --test_file $test_file --results_file $results
+cut -f 1 $results > t
+paste -d ' ' t $unseen_file > t2
+sort -rg t2 | cut -d ' ' -f 2 > temp
+
+cat temp2 temp1 temp0 temp | head -n 1000 > $run1_results
+cat temp2 temp1 temp | head -n 1000 > $run3_results
+
+# CLEAN UP
+rm temp*
+rm t2
+rm t
+
+echo "Getting Final Results DONE!"

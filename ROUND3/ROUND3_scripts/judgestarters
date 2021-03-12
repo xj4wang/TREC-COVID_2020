@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#############################################
+## EXPECTS THAT setup_do-once HAS BEEN RUN ##
+#############################################
+# where # is the topic number
+
+echo "Judging starter files START!"
+
+topic=$1
+working_files="WORKINGFILES"
+directory="metadata_files"
+starter_topic="${working_files}/starter_topic_$topic"
+relevant_words_file="${working_files}/relevant_words_file_$topic"
+
+# give rel judgements for the X starter files and save to jj_topic_#
+echo "Starting human judgements!"
+python displayMetadataFile.py $starter_topic $topic $directory $relevant_words_file
+echo "Finished human judgements!"
+
+# REPEAT
+echo "Judging starter files DONE!"

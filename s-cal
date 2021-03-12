@@ -65,7 +65,7 @@ R_file="${working_files}/R_topic_${topic}"
 R=`cat $R_file` # PICK UP WHERE WE LEFT OFF
 
 # 7) Temporarily augment the training set by adding 100 random document from the U, temporaily labeled "not relevant".
-shuf -n 100 docids-rnd5.txt | sed 's/$/,0/' > temp
+head -n 100 $U | sed 's/$/,0/' > temp
 cat $jj_file temp > $jj_file_temp
 
 # 8) Construct a classifier from the training set.

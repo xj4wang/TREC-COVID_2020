@@ -1,0 +1,89 @@
+#!/bin/bash
+
+#####################################################################
+## EXPECTS THAT setup_do-once and tune_hyperparameter HAS BEEN RUN ##
+#####################################################################
+# where # is the topic number
+
+echo "Reading results of hyperparameters START!"
+
+working_files="WORKINGFILES"
+directory="metadata_files"
+docids="docids-rnd2.shuf"
+
+number_of_topics=30
+k=10
+
+# split data into k groups, these are files containing just docids
+echo "Splitting into k=$k groups..."
+doc_size=`wc -l $docids  | cut -d ' ' -f 1`
+group_size=$((doc_size / k))
+last_group_size=$((doc_size - group_size * (k - 1)))
+
+# Creating trec_eval files for iterations of lambda for all i
+for lambda in 100 10 1 0.1 0.01 0.001 0.0001 0.00001 0.000001
+do
+	echo "Making trec_eval file for lambda=$lambda..."		
+	for (( topic=1; topic<=$number_of_topics; topic++ )) # iteration through all the topics
+	do
+		echo "Currently on topic=$topic..."
+		for (( i=1;  i<=$k; i++)) # iteration through all k folds for training
+		do
+		
+			save_file_name="${working_files}/te_file_${lambda}_${topic}_${i}"
+			touch $save_file_name
+			rm $save_file_name
+		
+			test_file_label="${working_files}/test_file_label_${i}"
+			test_file="${working_files}/test_file_${topic}_${i}"
+			results="${working_files}/results_file_${topic}_${i}_${lambda}"
+			
+			# append docids to the results file
+			cut -f 1 $results > temp
+			paste -d ' ' temp $test_file_label > temp2
+			sort -gr temp2 | head -n 1000 > temp
+			
+			python makeTrecEval.py $save_file_name "temp" $topic $i
+			
+		done
+	done
+done
+
+for lambda in 100 10 1 0.1 0.01 0.001 0.0001 0.00001 0.000001
+do
+	for (( i=1;  i<=$k; i++)) # iteration through all k folds for training
+	do
+		save_file_name="${working_files}/te_file_${lambda}_${i}"
+		touch $save_file_name
+		rm $save_file_name
+		
+		for (( topic=1; topic<=$number_of_topics; topic++ )) # iteration through all the topics
+		do
+			read_file_name="${working_files}/te_file_${lambda}_${topic}_${i}"
+			
+			# append docids to the results file
+			cat $read_file_name >> $save_file_name
+			rm $read_file_name
+		done
+		
+		te_result_name="${working_files}/te_result_${lambda}_${i}"
+		 ~/trec_eval-9.0.7/trec_eval qrels-rnd1.txt $save_file_name > $te_result_name
+	done
+	
+	# Averaging the results between k partitions and plotting it.
+	average_result_name="${working_files}/te_result_${lambda}"
+	python averageTrecEval.py $average_result_name $k > $average_result_name
+done
+
+# lambda values are hard coded in, this needs to be updated!!!!!
+final_result_file="${working_files}/te_result"
+average_result_name="${working_files}/te_result_100"
+cp $average_result_name $final_result_file
+for lambda in 10 1 0.1 0.01 0.001 0.0001 0.00001 0.000001
+do
+	average_result_name="${working_files}/te_result_${lambda}"
+	join -1 1 -2 1 $final_result_file $average_result_name > temp
+	mv temp $final_result_file
+done
+
+echo "Reading results of hyperparameters DONE!"

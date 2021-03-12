@@ -1,0 +1,15 @@
+dataset,arxiv,chen,ground,inform
+arxiv,tweet,data,collect,access
+dataset,arxiv,avail,data,covid
+dataset,arxiv,avail,covid,research
+dataset,arxiv,avail,github,data
+dataset,databas,arxiv,avail,data
+dataset,avail,data,onlin,open
+dataset,avail,data,collect,covid
+resourc,arxiv,data,access,covid
+dataset,data,collect,releas,annot
+dataset,databas,resourc,avail,websit
+websit,data,covid,onlin,misinform
+arxiv,websit,data,collect,covid
+dataset,arxiv,avail,data,collect
+arxiv,tweet,collect,covid,twitter

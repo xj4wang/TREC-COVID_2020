@@ -1,0 +1,36 @@
+#!/bin/bash
+
+#####################
+## NO INPUT NEEDED ##
+#####################
+
+# NEEDS metadata_files dir to already be made
+
+metadata_files="metadata_files"
+filesStillNeeded="docids-rnd3.txt"
+#filesStillNeeded="filesStillNeeded"
+
+echo "Start!"
+touch t
+rm t
+
+touch ERR
+rm ERR
+
+while read l;
+do
+	grep $l metadata.csv > t
+	count=`cat t | wc -l`
+	if [ $count -ne 1 ];
+	then
+		echo $l >> ERR
+	else
+		cat t > "${metadata_files}/${l}"
+		echo $l
+	fi
+		
+done < $filesStillNeeded # Initally docids-rndX.txt
+
+rm t
+
+echo "DONE!"

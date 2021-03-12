@@ -1,0 +1,21 @@
+#!/bin/bash
+
+############################################################
+## RUN judgeAUTO_ONE until stopping condition for topic X ##
+############################################################
+# where # is the topic number
+
+echo "Doing auto judging RUN START!"
+
+topic=$1
+
+for j in {1..30}
+do
+	for i in {1..100}
+	do
+		./judgeAUTO_ONE $j
+	done
+
+	# REPEAT
+	echo "Doing auto judging RUN DONE!"
+done

@@ -1,0 +1,7 @@
+# hyperparameters by https://dl.acm.org/doi/10.1145/2600428.2609601
+iterations=2000000
+dimensionality=1100000
+learner_type="logreg-pegasos" #paper only says Pegasos, log-pegasos is chosen from Gordon's class
+# hyperparameters by Gordon's class
+loop_type="stochastic" #he didn't specify, we went with the one that's binary labeling
+lambda=0.001

@@ -1,0 +1,104 @@
+#!/bin/bash
+
+#############################################
+## EXPECTS THAT setup_do-once HAS BEEN RUN ##
+#############################################
+# where # is the topic number
+
+echo "Tuning hyperparameters START!"
+
+working_files="WORKINGFILES"
+directory="metadata_files"
+docids="docids-rnd2.shuf"
+
+number_of_topics=30
+k=10
+
+topN_rel="${working_files}/topN_rel"
+N=1 #number of files to judge before retraining the model
+relevant_words_file="${working_files}/relevant_words_file_$topic"
+
+# hyperparameters by https://dl.acm.org/doi/10.1145/2600428.2609601
+iterations=2000000
+dimensionality=1100000
+learner_type="logreg-pegasos" #paper only says Pegasos, log-pegasos is chosen from Gordon's class
+# hyperparameters by Gordon's class
+loop_type="balanced-stochastic" #he didn't specify, we went with the one that's binary labeling
+# lambda=0.001 THIS IS SET LATER FOR TUNING
+
+# split data into k groups, these are files containing just docids
+echo "Splitting into k=$k groups..."
+doc_size=`wc -l $docids  | cut -d ' ' -f 1`
+group_size=$((doc_size / k))
+last_group_size=$((doc_size - group_size * (k - 1)))
+
+for (( i=1; i<=$k; i++ ))
+do
+	offset=$((i * group_size))
+	head -n $offset $docids | tail -n $group_size > $working_files/group_$i
+done
+tail -n $last_group_size $docids > $working_files/group_$k
+
+# make k training files for each of the topics
+echo "Creating training files..."
+# note: validation files can be made by simply appending the rest of the training files together
+python k-fold_make_training.py $k $working_files
+
+# make k testing files for each of the topics
+echo "Creating testing files..."
+for (( topic=1; topic<=$number_of_topics; topic++ )) # iteration through all the topics
+do
+	for (( i=1;  i<=$k; i++)) # iteration through all k folds for training
+	do
+		test_file="${working_files}/test_file_${topic}_$i"
+		touch $test_file
+		rm $test_file
+		for (( j=1; j<=$k; j++ ))
+		do
+			if [ $i -ne $j ]
+			then
+				cat "${working_files}/train_file_${topic}_$j" >> $test_file
+			fi
+		done		
+	done
+done
+
+# make k testing file labels (these are NOT topic specific)
+echo "Creating testing files labels..."
+for (( i=1;  i<=$k; i++)) # iteration through all k folds for training
+do
+	test_file_label="${working_files}/test_file_label_$i"
+	touch $test_file_label
+	rm $test_file_label
+	for (( j=1; j<=$k; j++ ))
+	do
+		if [ $i -ne $j ]
+		then
+			cat "${working_files}/group_$j">> $test_file_label
+		fi
+	done		
+done
+
+# Using SofiaML to do training and testing for iterations of lambda for all topics
+for lambda in 100 10 1 0.1 0.01 0.001 0.0001 0.00001 0.000001
+do
+	echo "Training and Testing for lambda=$lambda..."
+	for (( topic=1; topic<=$number_of_topics; topic++ )) # iteration through all the topics
+	do
+		echo "Topic: $topic"
+		for (( i=1;  i<=$k; i++)) # iteration through all k folds for training
+		do
+			train_file="${working_files}/train_file_${topic}_${i}"
+			test_file="${working_files}/test_file_${topic}_${i}"
+			model="${working_files}/model_${topic}_${i}_${lambda}"
+			results="${working_files}/results_file_${topic}_${i}_${lambda}"
+			# feed training_file_# to sofiaML to and obtain the model
+			~/sofia-ml-read-only/sofia-ml --learner_type $learner_type --loop_type $loop_type --lambda $lambda --iterations $iterations --dimensionality $dimensionality --training_file $train_file --model_out $model
+			
+			# feed model and testing_file_# to sofiaML to get rel judgements
+			~/sofia-ml-read-only/sofia-ml --model_in $model --test_file $test_file --results_file $results
+		done
+	done
+done
+
+echo "Tuning hyperparameters DONE!"

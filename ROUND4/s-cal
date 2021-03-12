@@ -1,0 +1,178 @@
+#!/bin/bash
+
+#############################################
+## EXPECTS THAT setup_do-once HAS BEEN RUN ##
+#############################################
+# where # is the topic number
+
+echo "S-CAL START!"
+
+topic=$1
+working_files="WORKINGFILES"
+directory="metadata_files"
+valid_docids="docids-rnd4.txt"
+
+train_file="${working_files}/train_file_${topic}"
+test_file="${working_files}/test_file_${topic}"
+test_file_ids="${working_files}/test_file_ids_${topic}"
+model="${working_files}/model_${topic}"
+results="${working_files}/results_file_${topic}" # this doesn't really matter, is never used
+
+jj_file="${working_files}/jj_topic_${topic}"
+jj_file_temp="${working_files}/jj_topic_${topic}_temp"
+
+topB_rel="${working_files}/topB_rel"
+topb_rel="${working_files}/topb_rel"
+
+N=1 #number of files to judge before retraining the model
+relevant_words_file="${working_files}/relevant_words_file_${topic}"
+
+
+###################################
+## SofiaML hyperparameters START ##
+###################################
+# hyperparameters by https://dl.acm.org/doi/10.1145/2600428.2609601
+iterations=2000000
+dimensionality=1100000
+learner_type="logreg-pegasos" #paper only says Pegasos, log-pegasos is chosen from Gordon's class
+# hyperparameters by Gordon's class
+loop_type="roc" #he didn't specify, we went with the one that's binary labeling
+lambda=0.00001
+#################################
+## SofiaML hyperparameters END ##
+#################################
+
+
+###########################
+## S-CAL Algorithm START ##
+###########################
+# 1) find a relevant seed document using ad-hock search, or construct a synthetic relevant document from the topic description. (DONE BY setup_do-once)
+# 2) The inital training set consists of the seed document identified in setp 1, labeled "relevant". (DONE BY setup_do-once)
+
+# 3) Draw a large uniform random sample U of size N from the document population. (DONE BY setup_do-once)
+U="${working_files}/U_topic_${topic}" # PICK UP WHERE WE LEFT OFF
+N=`wc -l $U | cut -d ' ' -f 1` # size of U
+
+# 4) Select a sub-sample size n. (Selected by paper https://cormack.uwaterloo.ca/scal/cormackgrossman16a.pdf)
+n=30 # number of documents to judge each iteration
+
+# 5) Set the initial batch size B to 1. (DONE BY setup_do-once)
+B_file="${working_files}/B_topic_${topic}"
+B=`cat $B_file` # PICK UP WHERE WE LEFT OFF
+
+# 6) Set R to 0. (DONE BY setup_do-once)
+R_file="${working_files}/R_topic_${topic}"
+R=`cat $R_file` # PICK UP WHERE WE LEFT OFF
+
+# 7) Temporarily augment the training set by adding 100 random document from the U, temporaily labeled "not relevant".
+head -n 100 $U | sed 's/$/,0/' > temp
+cat $jj_file temp > $jj_file_temp
+
+# 8) Construct a classifier from the training set.
+# filter out the ones that have been judged (using jj_topic_#) and label accordingly
+# and store results to train_file, the rest are stored to test_file wtih rel 0
+python label_rel.py $topic $train_file $test_file $test_file_ids $working_files $jj_file_temp
+# feed training_file_# to sofiaML to and obtain the model
+~/sofia-ml-read-only/sofia-ml --learner_type $learner_type --loop_type $loop_type --lambda $lambda --iterations $iterations --dimensionality $dimensionality --training_file $train_file --model_out $model
+# feed model and testing_file_# to sofiaML to get rel judgements
+~/sofia-ml-read-only/sofia-ml --model_in $model --test_file $test_file --results_file $results
+
+# 9) Remove the random documents added in step 7. (DONE BY using jj_file instead of jj_file_temp from here on out)
+# 10) Select the highest-scoring B documents from U 
+# select the top B most rel documents from not_judged_files_# according to SofiaML
+# paste together file ids and their results before sorting
+cut -f 1 $results > t2
+paste -d ' ' t2 $test_file_ids > t3
+mv t3 $results
+# sort results by rel, then by conf where k1 = conf, k2 = name
+# show only the top B to be labeled
+sort -rg $results | head -n $B | cut -d ' ' -f 2 > $topB_rel
+
+# 11) If R==1 or B<=n, let b=B; otherwise let b=n.
+if [ $R -eq 1 ] || [ $B -le $n ]
+then
+	b=$B
+else
+	b=$n
+fi
+
+# 12) Draw a random sub-sample of size b from B documents.
+shuf $topB_rel > temp
+head -n $b temp > $topb_rel
+
+# 13) Review the sub-sample, labeling each as "relevant" or "not relevant"
+touch $relevant_words_file
+rm $relevant_words_file
+while read filename;
+do
+	#######################################
+	## CHOOSING WORDS TO HIGHLIGHT start ##
+	#######################################
+	~/featurekit/porteroff "${directory}/$filename" | sort > list1
+	cut -d ' ' -f 2 df | cat -n > list2
+	join -1 1 -2 2 list1 list2 > list3
+
+	cut -d ' ' -f 4 list3 > model_posns
+
+	touch temp
+	rm temp
+	while read line;
+	do
+		cut -d ' ' -f $((line+1)) $model >> temp
+	done < model_posns
+
+	cut -d ' ' -f 1 list3 > temp2
+	paste -d ' ' temp temp2 | uniq | sort -gr | grep -v "^0 " | grep -v "^-" | head -n 5 | cut -d ' ' -f 2 > temp3
+	
+	cat temp3 | awk -vORS=, '{ print $1 }' | sed 's/,$/\n/' >> $relevant_words_file # take top 5 according to Gordon
+
+	rm list1
+	rm list2
+	rm list3
+	rm temp
+	rm temp2
+	rm temp3
+
+	#####################################
+	## CHOOSING WORDS TO HIGHLIGHT end ##
+	#####################################
+done < $topb_rel
+
+# give rel judgements and save to jj_topic_#
+echo "Starting human judgements!"
+python displayMetadataFile.py $topb_rel $topic $directory $relevant_words_file
+echo "Finished human judgements!"
+
+# 14) Add the labeled sub-sample to the trianing set (DONE BY use of jj_file, not explicitly)
+# 15) Remove the B documents from U
+sort $U > list1
+sort $topB_rel > list2
+comm -23 list1 list2 > list3
+shuf list3 > $U
+rm list1
+rm list2
+rm list3
+
+# 16) Add (r*B)/b to R, where r is the number of relevant documents in the sub-sample.
+r=`tail -n ${b} ${jj_file} | cut -d ',' -f 2 | grep -v "0" | wc -l`
+R=$(( $r * $B / $b ))
+
+# 17) Increase B by ciel(B/10)
+B_temp=`python -c "import math; print(${B}+math.ceil(${B}/10))"`
+B=$B_temp
+
+# 18) Repeat steps 7 through 17 until U is exhausted
+echo $R > $R_file
+echo "R: $R"
+echo $B > $B_file
+echo "B: $B"
+wc -l $U
+
+# 19) Train the final classifer on all labeled documents
+# NEED TO FINISH
+
+#########################
+## S-CAL Algorithm END ##
+#########################
+
+echo "S-CAL DONE!"
