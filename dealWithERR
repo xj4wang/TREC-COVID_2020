@@ -1,0 +1,23 @@
+#!/bin/bash
+
+#####################
+## NO INPUT NEEDED ##
+#####################
+
+# NEEDS metadata_files dir to already be made
+
+metadata_files="metadata_files"
+error_file="ERR"
+#filesStillNeeded="filesStillNeeded"
+
+echo "Start!"
+
+while read l;
+do
+	grep $l metadata.csv > t
+	count=`cat t | wc -l`
+	python keepLatestDate.py "t" "${metadata_files}/${l}"
+		
+done < $error_file
+
+echo "DONE!"

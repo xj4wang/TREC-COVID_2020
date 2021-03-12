@@ -1,0 +1,9 @@
+surviv,evapor,surfac,deposit,droplet
+jhazmat,abstract,droplet,pii,elsevi
+surviv,surfac,abstract,droplet,virus
+jhazmat,surfac,abstract,deposit,pii
+surviv,surfac,deposit,droplet,virus
+surviv,surfac,deposit,droplet,virus
+surviv,evapor,surfac,deposit,virus
+surviv,surfac,abstract,droplet,cold
+surfac,outsid,abstract,virus,pii

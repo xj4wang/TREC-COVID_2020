@@ -1,0 +1,15 @@
+#!/bin/bash
+
+############################################
+##-##
+############################################
+
+echo "Setting up U for known documents START!"
+
+for topic in {1..50}
+do
+	folder_name="topic_${topic}_known_docs"
+	ls WORKINGFILES/${folder_name} > WORKINGFILES/U_topic_${topic}
+done
+
+echo "Setting up U for known documents DONE!"

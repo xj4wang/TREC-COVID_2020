@@ -1,0 +1,98 @@
+#!/bin/bash
+
+############################
+## RUN ONLY ONCE AT START ##
+############################
+# where # is the topic number
+
+echo "Setup START!"
+
+directory="metadata_files"
+starter_file_name="topic_" # topic number will be appended after
+starter_names_file="starter_names_file"
+topics_file="topics-rnd5.xml"
+working_files="WORKINGFILES"
+
+qrel_file="qrels-covid_d4_j0.5-4.txt" # this is made by catting all qrel files together
+
+touch $working_files
+rm -rf $working_files
+mkdir $working_files
+
+touch $starter_names_file
+rm $starter_names_file
+
+###############
+## ONLY ONCE ##
+###############
+# create the svm.fil (feature representation) using the metadata_files directory
+tar cf - $directory | ~/featurekit/*nozip /dev/stdin
+
+# use dofeatureseed to create synthetic starter files for each topic
+# add each of the starter files names to jj_# marked as rel
+python make_starters.py $topics_file $starter_file_name $starter_names_file
+
+while read l;
+do
+	echo "Generating starter for $l"
+	~/featurekit/dofeaturesseed $l
+	jj_file_name="jj_$l"
+	
+	# keep working folder clean: remove stuff from dofast keeping only the svm files
+	rm "concordance.$l"
+	rm "tfdf.${l}.sort"
+	
+	echo "${l},1" > $jj_file_name
+	
+done < $starter_names_file
+
+#####################################
+## MOVE QREL RESULTS TO JJ_# start ##
+#####################################
+echo "Reading from qrel_file for topics 1 through 50"
+
+while read line;
+do
+	echo $line > temp
+	topic=`cut -d ' ' -f 1 temp`
+	cut -d ' ' -f 3 temp > docid
+	cut -d ' ' -f 4 temp > rel
+	
+	paste -d ',' docid rel >> "jj_topic_$topic"
+done < $qrel_file
+rm docid
+rm rel
+rm temp
+###################################
+## MOVE QREL RESULTS TO JJ_# end ##
+###################################
+
+########################################
+## SET INITIAL VALUES FOR S-CAL start ##
+########################################
+echo "Setting up stuff for S-CAL"
+valid_docids="docids-rnd5.txt"
+
+while read topic;
+do
+	# 3) Draw a large uniform random sample U of size N from the document population.
+	U="${working_files}/U_${topic}"
+	shuf $valid_docids > $U # large uniform random sample
+
+	# 5) Set the initial batch size B to 1.
+	echo "1" > "${working_files}/B_${topic}" # batch size, initally 1
+
+	# 6) Set R to 0.
+	echo "0" > "${working_files}/R_${topic}" # NOT SURE WHAT THIS IS
+done < $starter_names_file
+######################################
+## SET INITIAL VALUES FOR S-CAL end ##
+######################################
+
+echo "Setup DONE!"
+
+# keep current directory clean, move files to working directory
+mv $starter_names_file $working_files
+mv jj_topic_* $working_files
+mv svm.topic_* $working_files
+mv topic_* $working_files

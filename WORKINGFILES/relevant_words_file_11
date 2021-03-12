@@ -1,0 +1,9 @@
+triag,hospit,auc,test,model
+medrxiv,hospit,auc,fever,screen
+medrxiv,hospit,auc,demograph,test
+triag,medrxiv,hospit,auc,test
+medrxiv,auc,demograph,test,fever
+medrxiv,hospit,auc,demograph,model
+medrxiv,hospit,demograph,test,model
+triag,medrxiv,fever,sensit,guidelin
+medrxiv,hospit,demograph,test,screen

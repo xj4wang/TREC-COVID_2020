@@ -1,0 +1,25 @@
+#!/bin/bash
+
+###########################################
+## RUN getFinalResults for all 50 topics ##
+###########################################
+# where # is the topic number
+
+numoftopics=50
+
+echo "Getting Final Results RUN START!"
+
+for i in {1..50}
+do
+	./getFinalResults $i
+done
+
+# parameter 1: runid (xj4wang_runX)
+# parameter 2: number of topics (round5 = 50)
+# parameter 3: topic names (e.g. run2_results)
+python makeFinalDoc.py "xj4wang_run1" $numoftopics "run1_results"
+python makeFinalDoc.py "xj4wang_run2" $numoftopics "run2_results"
+python makeFinalDoc.py "xj4wang_run3" $numoftopics "run3_results"
+
+# REPEAT
+echo "Getting Final Results RUN DONE!"

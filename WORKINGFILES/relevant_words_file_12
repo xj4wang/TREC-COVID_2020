@@ -1,0 +1,6 @@
+quarantin,arxiv,model,durat,best
+quarantin,model,durat,seir,epidem
+quarantin,arxiv,model,epidem,basic
+arxiv,model,equat,expos,epidem
+quarantin,model,epidem,popul,dynam
+quarantin,model,equat,expos,epidem

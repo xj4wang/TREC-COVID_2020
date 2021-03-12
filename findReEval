@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#############################################
+## Find documents in need of re-evaluation ##
+#############################################
+# where # is the topic number
+
+numoftopics=50
+directory='RUN'
+echo "Finding re-eval documents START!"
+
+for i in {1..50}
+do
+
+
+
+done
+
+
+# REPEAT
+echo "Finding re-eval documents DONE!"

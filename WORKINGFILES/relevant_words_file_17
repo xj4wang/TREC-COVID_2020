@@ -1,0 +1,15 @@
+trial,clinic,hydroxychloroquin,drug,ritonavir
+trial,regist,clinic,hydroxychloroquin,registri
+trial,clinic,registri,intervent,search
+trial,clinic,hydroxychloroquin,search,design
+trial,recoveri,clinic,hydroxychloroquin,registri
+trial,regist,clinic,hydroxychloroquin,drug
+trial,clinic,hydroxychloroquin,intervent,clinicaltri
+trial,clinic,hydroxychloroquin,drug,ritonavir
+trial,regist,clinic,intervent,studi
+trial,regist,clinic,hydroxychloroquin,registri
+trial,clinic,hydroxychloroquin,search,design
+trial,clinic,hydroxychloroquin,clinicaltri,benefit
+trial,regist,clinic,drug,chines
+trial,regist,clinic,drug,chines
+trial,regist,clinic,drug,chines

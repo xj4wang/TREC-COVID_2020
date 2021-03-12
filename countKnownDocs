@@ -1,0 +1,38 @@
+#!/bin/bash
+
+###########################################
+##  ##
+###########################################
+# where # is the topic number
+
+echo "Getting COUNT START!"
+
+touch t
+rm t
+touch t1
+rm t1
+touch t2
+rm t2
+touch t0
+rm t0
+
+for i in {1..50}
+do
+	grep "^$i " qrels-covid_d4_j0.5-4.txt | wc -l >> t
+	grep "^$i " qrels-covid_d4_j0.5-4.txt | grep "1$" | wc -l >> t1
+	grep "^$i " qrels-covid_d4_j0.5-4.txt | grep "2$" | wc -l >> t2
+	grep "^$i " qrels-covid_d4_j0.5-4.txt | grep "0$" | wc -l >> t0
+done
+
+cat -n t > temp
+paste temp t1 t2 t0 > finalCount
+
+rm t
+rm t1
+rm t2
+rm t0
+rm temp
+
+
+# REPEAT
+echo "Getting COUNT DONE!"

@@ -1,0 +1,17 @@
+rout,oral,fecal,spread,ncov
+transmiss,rout,droplet,dental,possibl
+transmiss,rout,cov,sar,saliva
+transmiss,rout,oral,cov,sar
+transmiss,rout,cov,sar,droplet
+transmiss,oral,fecal,gastroenterolog,potenti
+transmiss,rout,cov,sar,possibl
+transmiss,rout,cov,sar,droplet
+rout,oral,fecal,spread,ncov
+transmiss,rout,cov,sar,droplet
+transmiss,rout,oral,cov,fecal
+transmiss,rout,oral,cov,sar
+transmiss,rout,oral,cov,sar
+transmiss,rout,oral,cov,fecal
+transmiss,rout,oral,cov,fecal
+transmiss,rout,cov,sar,droplet
+transmiss,rout,cov,sar,possibl

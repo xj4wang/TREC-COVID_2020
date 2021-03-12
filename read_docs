@@ -1,0 +1,37 @@
+#!/bin/bash
+
+############################################
+## RUN make_doc_folders for all 50 topics ##
+############################################
+
+echo "Moving known documents START!"
+
+topic=$1
+rel=$2
+
+grep "^${1} " qrels-covid_d5_j0.5-5.txt > temp
+
+touch temp2
+rm temp2
+
+while read line; 
+do
+	echo $line
+	
+	name=`echo $line | cut -d ' ' -f 3`
+	rel_judgement=`echo $line | cut -d ' ' -f 4`
+	folder_name="WORKINGFILES/topic_${topic}_known_docs"
+	
+	if [ $rel_judgement -eq $rel ];
+	then
+		echo $name >> temp2
+	fi
+
+done < temp
+
+python displayMetadataFile_verify.py temp2 $topic $folder_name
+
+rm temp
+rm temp2
+
+echo "Moving known documents DONE!"

@@ -1,0 +1,17 @@
+This is a clean version which can be shared with other labellers to use locally on their own machines.
+Missing metadata_files, use script to create yourself.
+
+For git, large files such as
+
+CORD19:
+metadata.csv
+
+have been ignored.
+
+To run, you will also need:
+
+FOLDERS:
+featurekit
+sofia-ml-read-only
+
+from outter directory.

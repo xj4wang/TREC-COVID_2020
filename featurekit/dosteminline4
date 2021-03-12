@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#~/featurekit/porter $1 | sed -e 's/[^a-z0-9]/ /g' -e 's/  */\n/g' | egrep -v '^$|[0-9]' | sort | uniq -c | sed -e "s,^,$1," -e 's/.*\///'
+
+X=`pwd`/$1
+mkdir /tmp/xxx$$
+cd /tmp/xxx$$
+mkdir thing
+cp $X thing/doc
+tar zcf thing.tgz thing
+~/feat*/dofast4 thing.tgz
+cat concordance

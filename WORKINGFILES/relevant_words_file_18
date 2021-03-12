@@ -1,0 +1,8 @@
+mask,wear,face,public,bmj
+mask,wear,cloth,bmj,unk
+mask,wear,public,cloth,protect
+mask,wear,face,should,covid
+mask,face,public,cloth,protect
+mask,wear,cloth,bmj,who
+mask,wear,face,public,health
+mask,wear,face,public,bmj
